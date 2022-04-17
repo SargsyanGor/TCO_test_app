@@ -1,32 +1,32 @@
 <template>
-  <div id="app">
-    <nav>
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </nav>
+  <div id="gs-app">
+    <NavbarLayout v-if="loggedIn"/>
     <router-view/>
   </div>
 </template>
 
 <style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap');
+#gs-app {
+  font-family: 'Raleway', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
-}
 
-nav {
-  padding: 30px;
-
-  a {
-    font-weight: bold;
-    color: #2c3e50;
-
-    &.router-link-exact-active {
-      color: #42b983;
-    }
+  .page-item.active .page-link {
+    background-color: $mainCyan !important;
+    border-color: $mainCyan !important;
   }
 }
 </style>
+<script>
+import NavbarLayout from "@/components/layout/NavbarLayout";
+export default {
+  components: { NavbarLayout },
+  computed: {
+    loggedIn() {
+      return this.$store.state.auth.status.loggedIn;
+    }
+  },
+}
+</script>

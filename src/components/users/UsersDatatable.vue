@@ -8,9 +8,7 @@
       <b-table
           :items="usersData.data"
           :fields="fields"
-          :current-page="currentPage"
-          :per-page="perPage"
-          :sort-by.sync="sortBy"
+          :current-page="usersData.page"
           stacked="md"
           outlined
           striped
@@ -20,20 +18,20 @@
         </template>
 
         <template #cell(avatar)="row">
-          <router-link to="/profile">
-            <b-img width="60" height="60" rounded="circle" :src="row.value" fluid alt="Responsive image"></b-img>
+          <router-link :to="{ name: 'profile', params: { id: row.item.id }}">
+            <b-img width="60" height="60px" rounded="circle" :src="row.value" alt="Responsive image"></b-img>
           </router-link>
         </template>
 
         <template #cell(fullName)="row">
-          <router-link to="/profile" class="text-info">{{ row.item.first_name + " " + row.item.last_name }}</router-link>
+          <router-link :to="{ name: 'profile', params: { id: row.item.id }}" class="text-info">{{ row.item.first_name + " " + row.item.last_name }}</router-link>
         </template>
 
         <template #cell(actions)="row">
-          <b-button size="sm" @click="showEditModal(row.item, row.index, $event.target)" class="mr-1 btn-info">
+          <b-button size="sm" @click="showEditModal(row.item, $event.target)" class="mr-1 btn-info">
             Edit
           </b-button>
-          <b-button size="sm" @click="showDeleteModal(row.item)" class="btn-danger">
+          <b-button size="sm" @click="showDeleteModal(row.item.id)" class="btn-danger">
             Delete
           </b-button>
         </template>
@@ -44,12 +42,13 @@
         <b-col sm="7" md="6" class="my-1">
           <b-pagination
               v-model="currentPage"
-              :total-rows="totalRows"
-              :per-page="perPage"
+              :total-rows="usersData.total"
+              :per-page="usersData.per_page"
               align="fill"
               size="sm"
               class="my-0 mt-2"
               variant="info"
+              @change="handlePageChange"
           ></b-pagination>
         </b-col>
       </b-row>
@@ -101,7 +100,7 @@
               :invalid-feedback="invalidFeedbackForUserName"
               :state="nameState"
           >
-            <b-form-input v-model="newUserName" :state="nameState" placeholder="Enter user's name" trim></b-form-input>
+            <b-form-input v-model="newUserData.newUserName" :state="nameState" placeholder="Enter user's name" trim></b-form-input>
           </b-form-group>
 
           <b-form-group
@@ -109,7 +108,7 @@
               :invalid-feedback="invalidFeedbackForUserJob"
               :state="jobState"
           >
-            <b-form-input v-model="newUserJob" :state="jobState" placeholder="Enter user's job" trim></b-form-input>
+            <b-form-input v-model="newUserData.newUserJob" :state="jobState" placeholder="Enter user's job" trim></b-form-input>
           </b-form-group>
         </div>
 
@@ -140,67 +139,153 @@ export default {
         { key: 'email', label: 'Email', class: 'align-middle' },
         { key: 'actions', label: 'Actions', class: 'align-middle' }
       ],
-      totalRows: 1,
       currentPage: 1,
-      perPage: 10,
-      pageOptions: [5, 10, 15, { value: 100, text: "Show a lot" }],
-      sortBy: '',
       editModal: {
+        userId: "",
         userName: "",
         userJob: ""
       },
-      newUserName: '',
-      newUserJob: ''
+      newUserData: {
+        newUserName: '',
+        newUserJob: ''
+      },
+      userToBeDeleted: "",
     }
   },
   computed: {
     usersData() {
-      console.log(this.$store.state.users.usersData)
       return this.$store.state.users.usersData;
     },
     nameState() {
-      return this.newUserName.length > 2
+      return this.newUserData.newUserName.length > 2
     },
     jobState() {
-      return this.newUserJob.length > 2
+      return this.newUserData.newUserJob.length > 2
     },
     invalidFeedbackForUserName() {
-      if (this.newUserName.length > 0) {
+      if (this.newUserData.newUserName.length > 0) {
         return 'Enter at least 4 characters.'
       }
       return 'Please enter something.'
     },
     invalidFeedbackForUserJob() {
-      if (this.newUserJob.length > 0) {
+      if (this.newUserData.newUserJob.length > 0) {
         return 'Enter at least 4 characters.'
       }
       return 'Please enter something.'
     },
     saveNewUserAllowed() {
-      return !this.newUserName.length || !this.newUserJob.length
+      return !this.newUserData.newUserName.length || !this.newUserData.newUserJob.length
     },
     updateUserAllowed() {
-      return !this.editModal.userName.length || !this.editModal.userJob.length
+      return !this.editModal.userName.length && !this.editModal.userJob.length
     },
   },
   methods: {
-    showEditModal(item, index, button) {
-      this.editModal.userName = item.first_name;
-      this.editModal.userJob = 'Software engineer'
+    showEditModal(user, button) {
+      this.editModal.userId = user.id
+      this.editModal.userName = user.first_name;
       this.$root.$emit('bv::show::modal', "editUserModal", button)
     },
-    showDeleteModal(item) {
-      console.log(item)
+    showDeleteModal(userId) {
+      this.userToBeDeleted = userId;
       this.$root.$emit('bv::show::modal', "deleteUserModal")
     },
+    handlePageChange(value) {
+      this.$store.dispatch('users/getUsersData', value).then(
+          () => {},
+          error => {
+            let errorInfo = error.response.data.error.toUpperCase();
+            this.$bvToast.toast(`${errorInfo}`, {
+              title: 'Notice!',
+              autoHideDelay: 5000,
+              appendToast: false,
+              variant: 'danger',
+              toaster: 'b-toaster-top-left'
+            })
+          }
+      )
+    },
     createNewUser() {
-      this.$refs["createUserModalRef"].hide();
+      this.$store.dispatch('users/createUser', this.newUserData).then(
+          () => {
+            this.$bvToast.toast(`Created successfully!`, {
+              title: 'Done!',
+              autoHideDelay: 3000,
+              appendToast: false,
+              variant: 'success',
+              toaster: 'b-toaster-top-left'
+            })
+            this.$refs["createUserModalRef"].hide();
+
+            this.newUserData.newUserName = "";
+            this.newUserData.newUserJob = "";
+          },
+          error => {
+            let errorInfo = error.response.data.error.toUpperCase();
+            this.$bvToast.toast(`${errorInfo}`, {
+              title: 'Notice!',
+              autoHideDelay: 5000,
+              appendToast: false,
+              variant: 'danger',
+              toaster: 'b-toaster-top-left'
+            })
+          }
+      )
     },
     updateUserInfo() {
-      this.$refs["editUserModalRef"].hide();
+      this.$store.dispatch('users/updateUserData', this.editModal.userId).then(
+          () => {
+            this.editModal.userId = "";
+            this.editModal.userName = "";
+            this.editModal.userJob = "";
+
+            this.$bvToast.toast(`Updated successfully!`, {
+              title: 'Done!',
+              autoHideDelay: 3000,
+              appendToast: false,
+              variant: 'success',
+              toaster: 'b-toaster-top-left'
+            })
+            this.$refs["editUserModalRef"].hide();
+          },
+          error => {
+            let errorInfo = error.response.data.error.toUpperCase();
+            this.$bvToast.toast(`${errorInfo}`, {
+              title: 'Notice!',
+              autoHideDelay: 5000,
+              appendToast: false,
+              variant: 'danger',
+              toaster: 'b-toaster-top-left'
+            })
+          }
+      )
     },
     deleteUser() {
-      console.log(999)
+      this.$store.dispatch('users/deleteUser', this.userToBeDeleted).then(
+          () => {
+            this.userToBeDeleted = ""
+
+            this.$bvToast.toast(`Deleted successfully!`, {
+              title: 'Done!',
+              autoHideDelay: 3000,
+              appendToast: false,
+              variant: 'success',
+              toaster: 'b-toaster-top-left'
+            })
+            this.$refs["deleteUserModalRef"].hide();
+          },
+          error => {
+            let errorInfo = error.response.data.error.toUpperCase();
+            this.$bvToast.toast(`${errorInfo}`, {
+              title: 'Notice!',
+              autoHideDelay: 5000,
+              appendToast: false,
+              variant: 'danger',
+              toaster: 'b-toaster-top-left'
+            })
+          }
+      )
     }
   }
 }

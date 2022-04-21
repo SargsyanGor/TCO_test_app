@@ -3,9 +3,9 @@
     <b-row>
       <b-col>
         <Transition name="fade" mode="out-in">
-          <div v-if="loadingData" class="d-flex justify-content-center flex-sm-column align-items-center mt-4 p-4">
+          <div v-if="loadingData" class="d-flex justify-content-center flex-column align-items-center p-4 gs-loading-wrapper">
             <b-icon icon="clock" animation="spin" font-scale="2" shift-v="8"></b-icon>
-            <b-alert class="w-100 mt-5 text-center" show variant="info">Please wait...Loading users data</b-alert>
+            <b-alert class="w-100 mt-5 text-center" show variant="light">Please wait...Loading users data</b-alert>
           </div>
           <section v-else>
             <div class="d-flex align-items-center mb-4">
@@ -33,8 +33,9 @@ export default {
   },
   components: { UsersDatatable },
   created() {
+    // Fake delay
     setTimeout(() => {
-      this.$store.dispatch('users/getUsersData').then(
+      this.$store.dispatch('users/getUsersData', 1).then(
           () => {
             this.loadingData = false
           },
@@ -49,11 +50,7 @@ export default {
             })
           }
       )
-
-    }, 5000);
-
-    // Set the initial number of items
-    // this.totalRows = this.usersData.length
+    }, 2000);
   }
 }
 </script>
@@ -64,5 +61,8 @@ export default {
 }
 .fade-enter, .fade-leave-to {
   opacity: 0
+}
+.gs-loading-wrapper {
+  min-height: calc(100vh - 80px - 6rem);
 }
 </style>
